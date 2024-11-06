@@ -1,0 +1,136 @@
+const Web3 = require('web3');
+const StellarSdk = require('stellar-sdk');
+const axios = require('axios');
+require('dotenv').config();
+
+// Inisialisasi Web3 untuk Ethereum
+const web3 = new Web3('https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID');
+
+// Inisialisasi Stellar server dan kunci pribadi
+const server = new StellarSdk.Server('https://horizon.stellar.org');
+const stellarSecretKey = process.env.STELLAR_SECRET_KEY;  // Kunci pribadi Stellar
+const stellarKeypair = StellarSdk.Keypair.fromSecret(stellarSecretKey);
+
+// URL API untuk Pi Network (sesuaikan dengan API yang benar)
+const PI_API_URL = "https://api.pinetwork.com"; // Ganti dengan URL Pi Network yang valid
+
+// Fungsi untuk memeriksa saldo Ethereum
+async function getEthereumBalance(address) {
+    try {
+        const balance = await web3.eth.getBalance(address);
+        console.log(`Ethereum balance: ${web3.utils.fromWei(balance, 'ether')} ETH`);
+    } catch (error) {
+        console.error('Error fetching Ethereum balance:', error.message);
+    }
+}
+
+// Fungsi untuk mengirim Ethereum
+async function sendEthereum(from, to, amount, privateKey) {
+    try {
+        const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+        web3.eth.accounts.wallet.add(account);
+        
+        const tx = {
+            from: from,
+            to: to,
+            value: web3.utils.toWei(amount, 'ether'),
+            gas: 21000,
+            gasPrice: await web3.eth.getGasPrice(),
+        };
+
+        const receipt = await web3.eth.sendTransaction(tx);
+        console.log('Ethereum transaction receipt:', receipt);
+    } catch (error) {
+        console.error('Error sending Ethereum:', error.message);
+    }
+}
+
+// Fungsi untuk memeriksa saldo Stellar
+async function getStellarBalance(address) {
+    try {
+        const account = await server.accounts().accountId(address).call();
+        const balance = account.balances.find(b => b.asset_type === 'native');
+        console.log(`Stellar balance: ${balance.balance} XLM`);
+    } catch (error) {
+        console.error('Error fetching Stellar balance:', error.message);
+    }
+}
+
+// Fungsi untuk mengirim Stellar
+async function sendStellar(fromSecret, to, amount) {
+    try {
+        const sourceKeys = StellarSdk.Keypair.fromSecret(fromSecret);
+        const transaction = new StellarSdk.TransactionBuilder(await server.loadAccount(sourceKeys.publicKey()))
+            .addOperation(StellarSdk.Operation.payment({
+                destination: to,
+                asset: StellarSdk.Asset.native(),
+                amount: amount.toString(),
+            }))
+            .setTimeout(30)
+            .build();
+
+        transaction.sign(sourceKeys);
+        const result = await server.submitTransaction(transaction);
+        console.log('Stellar transaction result:', result);
+    } catch (error) {
+        console.error('Error sending Stellar:', error.message);
+    }
+}
+
+// Fungsi untuk menahan aset Pi Network
+async function holdAssetInPi(amount, sender) {
+    try {
+        const response = await axios.post(`${PI_API_URL}/hold`, { amount, sender });
+        return response.data.transactionId;
+    } catch (error) {
+        console.error("Error holding asset in Pi Network:", error.message);
+        throw error;
+    }
+}
+
+// Fungsi untuk transfer aset di Pi Network
+async function transferPiAsset(amount, sender, receiver) {
+    try {
+        const response = await axios.post(`${PI_API_URL}/transfer`, { amount, sender, receiver });
+        return response.data.transactionId;
+    } catch (error) {
+        console.error("Error transferring asset in Pi Network:", error.message);
+        throw error;
+    }
+}
+
+// Fungsi utama untuk mensimulasikan dompet multi-jaringan
+async function simulateMultiWallet() {
+    const ethAddress = '0xYourEthereumAddress'; // Ganti dengan alamat Ethereum Anda
+    const stellarAddress = stellarKeypair.publicKey(); // Alamat Stellar Anda
+    const piSender = 'piSenderAddress'; // Ganti dengan alamat pengirim Pi Network
+    const piReceiver = 'piReceiverAddress'; // Ganti dengan alamat penerima Pi Network
+
+    // Cek saldo Ethereum
+    console.log("Checking Ethereum balance...");
+    await getEthereumBalance(ethAddress);
+
+    // Cek saldo Stellar
+    console.log("Checking Stellar balance...");
+    await getStellarBalance(stellarAddress);
+
+    // Cek saldo Pi Network (jika API tersedia)
+    console.log("Checking Pi Network balance...");
+    await holdAssetInPi(1000, piSender); // Asumsi Pi API mendukung fitur ini
+
+    // Kirim Ethereum
+    const ethPrivateKey = process.env.ETH_PRIVATE_KEY; // Kunci pribadi Ethereum
+    console.log("Sending Ethereum...");
+    await sendEthereum(ethAddress, '0xRecipientAddress', 0.1, ethPrivateKey); // Ganti dengan alamat penerima
+
+    // Kirim Stellar
+    console.log("Sending Stellar...");
+    await sendStellar(stellarSecretKey, 'GRecipientPublicKey', 10); // Ganti dengan kunci publik penerima Stellar
+
+    // Transfer Pi Network
+    console.log("Transferring Pi Network assets...");
+    await transferPiAsset(1000, piSender, piReceiver); // Transfer token Pi ke penerima
+}
+
+// Jalankan simulasi
+simulateMultiWallet();
