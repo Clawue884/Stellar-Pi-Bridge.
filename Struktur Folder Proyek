@@ -1,0 +1,124 @@
+
+Stellar-Pi-Bridge/
+├── backend/
+│   ├── config/
+│   │   └── default.json            # Konfigurasi dasar (API keys, URLs)
+│   ├── controllers/
+│   │   └── transactionController.js # Fungsi untuk mengelola transaksi lintas jaringan
+│   ├── models/
+│   │   └── transactionModel.js      # Skema untuk data transaksi
+│   ├── services/
+│   │   ├── stellarService.js       # Layanan untuk berinteraksi dengan Stellar
+│   │   └── piNetworkService.js     # Layanan untuk berinteraksi dengan Pi Network
+│   ├── utils/
+│   │   └── logger.js               # Log aktivitas dan error handling
+│   ├── app.js                      # Inisiasi aplikasi backend
+│   ├── routes.js                   # Pengaturan rute API
+│   └── package.json                # Dependencies backend
+├── frontend/
+│   ├── public/
+│   │   └── index.html              # File utama HTML
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Wallet.js           # Komponen untuk wallet pengguna
+│   │   │   └── Transfer.js         # Komponen transfer aset antar jaringan
+│   │   ├── services/
+│   │   │   └── api.js              # Fungsi untuk panggilan API backend
+│   │   ├── App.js                  # Komponen utama frontend
+│   │   └── index.js                # Entry point React
+│   └── package.json                # Dependencies frontend
+├── smart-contracts/
+│   ├── stellar/
+│   │   └── escrowContract.soroban  # Kontrak Soroban untuk escrow di jaringan Stellar
+│   └── README.md                   # Dokumentasi kontrak pintar
+├── .env                            # File konfigurasi lingkungan (API keys, secrets)
+├── README.md                       # Dokumentasi proyek
+└── LICENSE                         # Lisensi proyek
+
+Penjelasan Struktur
+
+1. Backend:
+
+config: Menyimpan konfigurasi seperti API keys, URL, dan pengaturan lainnya.
+
+controllers: Logika utama untuk menangani transaksi lintas rantai.
+
+models: Skema data, misalnya transactionModel.js untuk menyimpan status transaksi.
+
+services: Berisi layanan untuk berkomunikasi dengan jaringan Stellar dan Pi.
+
+utils: Alat bantu seperti logging untuk mencatat error dan aktivitas.
+
+app.js: Inisiasi server backend (menggunakan NestJS atau Express).
+
+routes.js: Rute API untuk operasi lintas rantai.
+
+
+
+2. Frontend:
+
+public: File HTML utama yang berfungsi sebagai entry point aplikasi React.
+
+src: Folder sumber aplikasi React yang berisi komponen-komponen UI.
+
+components: Komponen UI seperti wallet dan transfer yang dapat digunakan pengguna.
+
+services/api.js: Berisi fungsi untuk menghubungkan frontend ke API backend.
+
+
+
+3. Smart Contracts:
+
+stellar/escrowContract.soroban: Smart contract di jaringan Stellar menggunakan Soroban untuk menahan token hingga transaksi dikonfirmasi.
+
+README.md: Dokumentasi untuk kontrak pintar, seperti fungsi dan parameter.
+
+
+
+4. .env: Menyimpan variabel lingkungan seperti API keys dan konfigurasi keamanan.
+
+
+5. README.md: Penjelasan tentang proyek, instalasi, dan panduan penggunaan.
+
+
+
+Contoh Isi File
+
+backend/routes.js
+
+const express = require('express');
+const transactionController = require('./controllers/transactionController');
+const router = express.Router();
+
+router.post('/transfer', transactionController.transferAssets);
+router.get('/transaction/:id', transactionController.getTransactionStatus);
+
+module.exports = router;
+
+frontend/src/services/api.js
+
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+export const initiateTransfer = async (data) => {
+  return await axios.post(`${API_URL}/transfer`, data);
+};
+
+export const getTransactionStatus = async (id) => {
+  return await axios.get(`${API_URL}/transaction/${id}`);
+};
+
+smart-contracts/stellar/escrowContract.soroban
+
+// Pseudo-code for escrow contract in Soroban
+contract Escrow {
+    fn hold_asset(token, amount, sender, receiver) {
+        // Logic to hold assets until cross-chain transfer is validated
+    }
+
+    fn release_asset(token, amount, receiver) {
+        // Logic to release assets once validation is complete
+    }
+}
+
