@@ -1,0 +1,51 @@
+#![no_std]
+
+use soroban_sdk::{contractimpl, Address, Env, Symbol};
+
+pub struct EscrowContract;
+
+#[contractimpl]
+impl EscrowContract {
+    // Fungsi untuk menahan aset (lock) di escrow sampai verifikasi selesai
+    pub fn hold_asset(env: Env, token: Address, amount: i128, sender: Address, receiver: Address) {
+        // Logika untuk mengunci aset di jaringan Stellar
+        // Menyimpan informasi seperti token, jumlah, pengirim, dan penerima
+        env.storage().set(&Symbol::new(env, "token"), &token);
+        env.storage().set(&Symbol::new(env, "amount"), &amount);
+        env.storage().set(&Symbol::new(env, "sender"), &sender);
+        env.storage().set(&Symbol::new(env, "receiver"), &receiver);
+
+        // Memberikan notifikasi bahwa aset telah di-hold
+        env.log("Aset telah ditahan di escrow.");
+    }
+
+    // Fungsi untuk melepas aset (release) setelah verifikasi lintas rantai
+    pub fn release_asset(env: Env, token: Address, amount: i128, receiver: Address) {
+        // Verifikasi bahwa kontrak ini menyimpan aset yang diminta
+        let stored_token: Address = env.storage().get(&Symbol::new(env, "token")).unwrap();
+        let stored_amount: i128 = env.storage().get(&Symbol::new(env, "amount")).unwrap();
+        let stored_receiver: Address = env.storage().get(&Symbol::new(env, "receiver")).unwrap();
+
+        assert_eq!(token, stored_token, "Token tidak cocok.");
+        assert_eq!(amount, stored_amount, "Jumlah tidak cocok.");
+        assert_eq!(receiver, stored_receiver, "Penerima tidak cocok.");
+
+        // Logika untuk mentransfer aset dari escrow ke penerima
+        // Setelah transfer, hapus data dari storage
+        env.storage().remove(&Symbol::new(env, "token"));
+        env.storage().remove(&Symbol::new(env, "amount"));
+        env.storage().remove(&Symbol::new(env, "receiver"));
+
+        env.log("Aset telah dilepas ke penerima.");
+    }
+
+    // Fungsi untuk memeriksa status escrow
+    pub fn check_status(env: Env) -> (Option<Address>, Option<i128>, Option<Address>, Option<Address>) {
+        let token: Option<Address> = env.storage().get(&Symbol::new(env, "token"));
+        let amount: Option<i128> = env.storage().get(&Symbol::new(env, "amount"));
+        let sender: Option<Address> = env.storage().get(&Symbol::new(env, "sender"));
+        let receiver: Option<Address> = env.storage().get(&Symbol::new(env, "receiver"));
+
+        (token, amount, sender, receiver)
+    }
+}
